@@ -14,30 +14,22 @@ int main(int argc, char* argv[]){
     }
 
     for(int i = 1; i < argc; i++){
-        FILE *f;
         struct stat file;
 
-        if((f = open(argv[i], O_WRONLY)) <0 ){
-            perror("Cannot open file!\n");
-            exit(1);
-        }
-
-        if(fstat(f, &file)){
+        if(lstat(argv[i], &file)){
             perror("Error!\n");
             exit(2);
         }
 
-        if(S_ISREG(file.st_mode) && !(S_ISLNK(file.st_mode))){
-            printf("-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
-        }
-        else if(S_ISDIR(file.st_mode)){
+        if(S_ISDIR(file.st_mode)){
             printf("-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
         }
-        else if(S_ISLNK(file.st_mode)){
+        if(S_ISLNK(file.st_mode)){
             printf("-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
+        }
+        if(S_ISREG(file.st_mode)){
+            printf("-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
         }
 
     }
-
-
 }
