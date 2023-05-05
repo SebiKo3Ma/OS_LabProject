@@ -7,6 +7,21 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+void processOptions(char options[], int type){
+    char *opt;
+    opt = strtok(options, " ");
+
+    while(opt != NULL ) {
+      printf( " %s\n", opt);
+
+        
+    
+      opt = strtok(NULL, " ");
+   }
+
+
+}
+
 int main(int argc, char* argv[]){
     if(argc < 2){
         perror("Invalid number of arguments!");
@@ -21,8 +36,12 @@ int main(int argc, char* argv[]){
             exit(2);
         }
 
+        char options[100];
+
         if(S_ISDIR(file.st_mode)){
             printf("-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
+            fgets(options, sizeof(options), stdin);
+            processOptionsDir(options);
         }
         if(S_ISLNK(file.st_mode)){
             printf("-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
