@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
  struct stat file;
  char filepath[50];
@@ -246,8 +248,7 @@ int main(int argc, char* argv[]){
         exit(0);
     }
 
-    int PID;
-    char buffer[200];
+    int PID, status;
 
     for(int i = 1; i < argc; i++){
         if((PID = fork()) < 0){
@@ -255,9 +256,6 @@ int main(int argc, char* argv[]){
             exit(i);
         }
         if(PID == 0){
-            sprintf(buffer, "Proccess %d with PID %d and parentID %d\n", i, getpid(), getppid());
-            printf("%s\n", buffer);
-
             if(lstat(argv[i], &file)){
                 perror("Error!\n");
                 exit(2);
@@ -265,6 +263,8 @@ int main(int argc, char* argv[]){
 
             int type;
 
+            strcpy(filepath, argv[i]);
+            printName();
             if(S_ISREG(file.st_mode)){
                 printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
                 type = 1;
@@ -280,17 +280,13 @@ int main(int argc, char* argv[]){
                 type = 3;
                 
             }
-            strcpy(filepath, argv[i]);
             validateOptions(type);
 
             exit(i);
         }
-        sleep(2);
-    }
-
-    int status;
-    for(int i = 1; i < argc; i++){
-        int PID_Child = wait(&status);
+        sleep(1);
+        int PID_Child;
+        PID_Child = wait(&status);
         if(PID_Child < 0){
             perror("Error!");
             exit(i);
