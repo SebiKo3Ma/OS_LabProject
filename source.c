@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
 
  struct stat file;
  char filename[50];
@@ -18,41 +19,43 @@ void printSize(){
     printf("Size: %ld Bytes\n", file.st_size);
 }
 
-void processOptionsDir(char options[]){
-    char *opt;
-    opt = strtok(options, " ");
-
-    while(opt != NULL ) {
-        if((strlen(opt) == 2 && opt[0] == '-')){
-            switch(opt[1]){
-                case 'n':
-                    printName();
-                break;
-
-                case 'd':
-                    printSize();
-                break;
-
-                case 'a':
-                    printf( "a %s\n", opt);
-                break;
-
-                case 'c':
-                    printf( "c %s\n", opt);
-                break;
-
-                default:
-                    printf("Invalid option: %s\n", opt);
-            }
-        } else printf("Invalid option: %s\n", opt);
-        
-      opt = strtok(NULL, " ");
-   }
+void hardLinkNo(){
+    printf("Number of Hard Links: %ld\n", file.st_nlink);
 }
 
+void lastModified(){
+    char mtime[80];
+    time_t t = file.st_mtime;
+    struct tm lt;
+    localtime_r(&t, &lt);
+    strftime(mtime, sizeof mtime, "%a, %d %b %Y %T", &lt);
+    printf("Time of last modification: %s\n", mtime);
+}
+
+void accessRights(){
+    printf("User:\nRead - %s\nWrite - %s\nExec - %s\n\nGroup:\nRead - %s\nWrite - %s\nExec - %s\n\nOthers:\nRead - %s\nWrite - %s\nExec - %s\n\n", 
+    (file.st_mode & S_IRUSR) ? "yes" : "no",
+    (file.st_mode & S_IWUSR) ? "yes" : "no",
+    (file.st_mode & S_IXUSR) ? "yes" : "no",
+    (file.st_mode & S_IRGRP) ? "yes" : "no",
+    (file.st_mode & S_IWGRP) ? "yes" : "no",
+    (file.st_mode & S_IXGRP) ? "yes" : "no",
+    (file.st_mode & S_IROTH) ? "yes" : "no",
+    (file.st_mode & S_IWOTH) ? "yes" : "no",
+    (file.st_mode & S_IXOTH) ? "yes" : "no"
+    );
+}
+
+void createSymLink(char *name){
+    int symLink = symlink(filename, name);
+    if(symLink == 0)
+        printf("Symbolic link created succesfully!\n");
+        else printf("Error creating Symbolic link\n");
+}
 
 void processOptionsFile(char options[]){
     char *opt;
+    char *name;
     opt = strtok(options, " ");
 
     while(opt != NULL ) {
@@ -67,19 +70,20 @@ void processOptionsFile(char options[]){
                 break;
 
                 case 'h':
-                    printf( "h %s\n", opt);
+                    hardLinkNo();
                 break;
 
                 case 'm':
-                    printf( "m %s\n", opt);
+                    lastModified();
                 break;
 
                 case 'a':
-                    printf( "a %s\n", opt);
+                    accessRights();
                 break;
 
                 case 'l':
-                    printf( "l %s %s\n", opt, strtok(NULL, " "));
+                    name = strtok(NULL, " ");
+                    createSymLink(name);
                 break;
 
 
@@ -91,8 +95,6 @@ void processOptionsFile(char options[]){
       opt = strtok(NULL, " ");
    }
 }
-
-
 
 void processOptionsLink(char options[]){
     char *opt;
@@ -119,7 +121,7 @@ void processOptionsLink(char options[]){
                 break;
 
                 case 'a':
-                    printf( "a %s\n", opt);
+                    accessRights();
                 break;
 
                 default:
@@ -130,6 +132,40 @@ void processOptionsLink(char options[]){
       opt = strtok(NULL, " ");
    }
 }
+
+
+void processOptionsDir(char options[]){
+    char *opt;
+    opt = strtok(options, " ");
+
+    while(opt != NULL ) {
+        if((strlen(opt) == 2 && opt[0] == '-')){
+            switch(opt[1]){
+                case 'n':
+                    printName();
+                break;
+
+                case 'd':
+                    printSize();
+                break;
+
+                case 'a':
+                    accessRights();
+                break;
+
+                case 'c':
+                    printf( "c %s\n", opt);
+                break;
+
+                default:
+                    printf("Invalid option: %s\n", opt);
+            }
+        } else printf("Invalid option: %s\n", opt);
+        
+      opt = strtok(NULL, " ");
+   }
+}
+
 
 void validateOptions(int type){
     char options[100];
