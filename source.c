@@ -251,16 +251,17 @@ int main(int argc, char* argv[]){
     int PID, status;
 
     for(int i = 1; i < argc; i++){
+       
+        if(lstat(argv[i], &file)){
+            perror("Error!\n");
+            exit(2);
+        }
+
         if((PID = fork()) < 0){
             perror("Failed to create process!\n");
-            exit(i);
+                exit(i);
         }
-        if(PID == 0){
-            if(lstat(argv[i], &file)){
-                perror("Error!\n");
-                exit(2);
-            }
-
+        else if(PID == 0){
             int type;
 
             strcpy(filepath, argv[i]);
@@ -283,9 +284,41 @@ int main(int argc, char* argv[]){
             validateOptions(type);
 
             exit(i);
+
+            sleep(1);
         }
+
+        if((PID = fork()) < 0){
+            perror("Failed to create process!\n");
+            exit(i);
+        }
+        else if(PID == 0){
+            if(S_ISREG(file.st_mode)){
+                printf("Execute script or count lines\n");
+            }
+
+            if(S_ISLNK(file.st_mode)){
+                printf("Change permissions\n");
+            }
+            
+            if(S_ISDIR(file.st_mode)){
+                printf("Create text file\n");
+            }
+            exit(i);
+        }
+
+
         sleep(1);
         int PID_Child;
+        PID_Child = wait(&status);
+        if(PID_Child < 0){
+            perror("Error!");
+            exit(i);
+        }
+        if(WIFEXITED(status)){
+            printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
+        }
+
         PID_Child = wait(&status);
         if(PID_Child < 0){
             perror("Error!");
