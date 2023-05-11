@@ -7,6 +7,17 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+ struct stat file;
+ char filename[50];
+
+void printName(){
+    printf("Name: %s\n", filename);
+}
+
+void printSize(){
+    printf("Size: %ld Bytes\n", file.st_size);
+}
+
 void processOptionsDir(char options[]){
     char *opt;
     opt = strtok(options, " ");
@@ -15,11 +26,11 @@ void processOptionsDir(char options[]){
         if((strlen(opt) == 2 && opt[0] == '-')){
             switch(opt[1]){
                 case 'n':
-                    printf( "n %s\n", opt);
+                    printName();
                 break;
 
                 case 'd':
-                    printf( "d %s\n", opt);
+                    printSize();
                 break;
 
                 case 'a':
@@ -48,11 +59,11 @@ void processOptionsFile(char options[]){
         if((strlen(opt) == 2 && opt[0] == '-')){
             switch(opt[1]){
                 case 'n':
-                    printf( "n %s\n", opt);
+                    printName();
                 break;
 
                 case 'd':
-                    printf( "d %s\n", opt);
+                    printSize();
                 break;
 
                 case 'h':
@@ -91,7 +102,7 @@ void processOptionsLink(char options[]){
         if((strlen(opt) == 2 && opt[0] == '-')){
             switch(opt[1]){
                 case 'n':
-                    printf( "n %s\n", opt);
+                    printName();
                 break;
 
                 case 'l':
@@ -100,7 +111,7 @@ void processOptionsLink(char options[]){
                 break;
 
                 case 'd':
-                    printf( "d %s\n", opt);
+                    printSize();
                 break;
 
                 case 't':
@@ -155,8 +166,6 @@ int main(int argc, char* argv[]){
     }
 
     for(int i = 1; i < argc; i++){
-        struct stat file;
-
         if(lstat(argv[i], &file)){
             perror("Error!\n");
             exit(2);
@@ -165,20 +174,21 @@ int main(int argc, char* argv[]){
         int type;
 
         if(S_ISREG(file.st_mode)){
-            printf("-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
+            printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
             type = 1;
         }
 
         if(S_ISLNK(file.st_mode)){
-            printf("-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
+            printf("\nSYMBOLIC LINK:\n-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
             type = 2;
         }
         
         if(S_ISDIR(file.st_mode)){
-            printf("-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
+            printf("\nDIRECTORY:\n-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
             type = 3;
             
         }
+        strcpy(filename, argv[i]);
         validateOptions(type);
 
     }
