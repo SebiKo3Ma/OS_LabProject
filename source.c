@@ -7,12 +7,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <dirent.h>
 
  struct stat file;
- char filename[50];
+ char filepath[50];
 
 void printName(){
-    printf("Name: %s\n", filename);
+    char *name = strrchr(filepath,'/');
+    printf("Name: %s\n", name == NULL ? filepath : name + 1);
 }
 
 void printSize(){
@@ -47,10 +49,53 @@ void accessRights(){
 }
 
 void createSymLink(char *name){
-    int symLink = symlink(filename, name);
+    int symLink = symlink(filepath, name);
     if(symLink == 0)
         printf("Symbolic link created succesfully!\n");
         else printf("Error creating Symbolic link\n");
+}
+
+void deleteSymLink(){
+    unlink(filepath);
+    printf("Symbolic link deleted!\n");
+}
+
+void targetFileSize(){
+    struct stat target;
+    if(stat(filepath, &target)){
+            perror("Error!\n");
+            exit(2);
+        }
+    printf("Size: %ld Bytes\n", target.st_size);
+}
+
+void countCFiles(){
+    int counter = 0;
+    DIR * dir;
+    if((dir = opendir(filepath)) <0 ){
+        perror("Cannot open folder!\n");
+        exit(1);
+    }
+    
+    struct dirent *entry;
+    struct stat infoEnt;
+    char path[500];
+    while((entry = readdir(dir)) != NULL){
+        sprintf(path, "%s/%s", filepath, entry->d_name);
+        if(lstat(path, &infoEnt)){
+            printf("Invalid file!");
+        }
+
+        if(S_ISREG(infoEnt.st_mode)){
+            char *ext = strrchr(entry->d_name,'.');
+            if(ext && !strcmp(ext,".c")){
+                counter++;
+            }
+        }
+        
+    }
+    printf("Number of C files: %d\n", counter);
+    closedir(dir);
 }
 
 void processOptionsFile(char options[]){
@@ -108,7 +153,7 @@ void processOptionsLink(char options[]){
                 break;
 
                 case 'l':
-                    printf( "l %s\n", opt);
+                    deleteSymLink();
                     return;
                 break;
 
@@ -117,7 +162,7 @@ void processOptionsLink(char options[]){
                 break;
 
                 case 't':
-                    printf( "t %s\n", opt);
+                    targetFileSize();
                 break;
 
                 case 'a':
@@ -154,7 +199,7 @@ void processOptionsDir(char options[]){
                 break;
 
                 case 'c':
-                    printf( "c %s\n", opt);
+                    countCFiles();
                 break;
 
                 default:
@@ -201,31 +246,57 @@ int main(int argc, char* argv[]){
         exit(0);
     }
 
+    int PID;
+    char buffer[200];
+
     for(int i = 1; i < argc; i++){
-        if(lstat(argv[i], &file)){
-            perror("Error!\n");
-            exit(2);
+        if((PID = fork()) < 0){
+            perror("Failed to create process!\n");
+            exit(i);
         }
+        if(PID == 0){
+            sprintf(buffer, "Proccess %d with PID %d and parentID %d\n", i, getpid(), getppid());
+            printf("%s\n", buffer);
 
-        int type;
+            if(lstat(argv[i], &file)){
+                perror("Error!\n");
+                exit(2);
+            }
 
-        if(S_ISREG(file.st_mode)){
-            printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
-            type = 1;
-        }
+            int type;
 
-        if(S_ISLNK(file.st_mode)){
-            printf("\nSYMBOLIC LINK:\n-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
-            type = 2;
-        }
-        
-        if(S_ISDIR(file.st_mode)){
-            printf("\nDIRECTORY:\n-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
-            type = 3;
+            if(S_ISREG(file.st_mode)){
+                printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
+                type = 1;
+            }
+
+            if(S_ISLNK(file.st_mode)){
+                printf("\nSYMBOLIC LINK:\n-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
+                type = 2;
+            }
             
-        }
-        strcpy(filename, argv[i]);
-        validateOptions(type);
+            if(S_ISDIR(file.st_mode)){
+                printf("\nDIRECTORY:\n-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
+                type = 3;
+                
+            }
+            strcpy(filepath, argv[i]);
+            validateOptions(type);
 
+            exit(i);
+        }
+        sleep(2);
+    }
+
+    int status;
+    for(int i = 1; i < argc; i++){
+        int PID_Child = wait(&status);
+        if(PID_Child < 0){
+            perror("Error!");
+            exit(i);
+        }
+        if(WIFEXITED(status)){
+            printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
+        }
     }
 }
