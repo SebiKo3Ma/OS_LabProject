@@ -13,11 +13,11 @@
 #include <stdbool.h>
 
  struct stat file;
- char filepath[50];
+ char FILEPATH[50];
 
 void printName(){
-    char *name = strrchr(filepath,'/');
-    printf("Name: %s\n", name == NULL ? filepath : name + 1);
+    char *name = strrchr(FILEPATH,'/');
+    printf("Name: %s\n", name == NULL ? FILEPATH : name + 1);
 }
 
 void printSize(){
@@ -52,20 +52,20 @@ void accessRights(){
 }
 
 void createSymLink(char *name){
-    int symLink = symlink(filepath, name);
+    int symLink = symlink(FILEPATH, name);
     if(symLink == 0)
         printf("Symbolic link created succesfully!\n");
         else printf("Error creating Symbolic link\n");
 }
 
 void deleteSymLink(){
-    unlink(filepath);
+    unlink(FILEPATH);
     printf("Symbolic link deleted!\n");
 }
 
 void targetFileSize(){
     struct stat target;
-    if(stat(filepath, &target)){
+    if(stat(FILEPATH, &target)){
             perror("Error!\n");
             exit(2);
         }
@@ -73,7 +73,7 @@ void targetFileSize(){
 }
 
 bool checkCFile(){
-    char *ext = strrchr(filepath,'.');
+    char *ext = strrchr(FILEPATH,'.');
     if(ext && !strcmp(ext,".c")){
         return true;
         }
@@ -83,7 +83,7 @@ bool checkCFile(){
 void countCFiles(){
     int counter = 0;
     DIR * dir;
-    if((dir = opendir(filepath)) <0 ){
+    if((dir = opendir(FILEPATH)) <0 ){
         perror("Cannot open folder!\n");
         exit(1);
     }
@@ -92,7 +92,7 @@ void countCFiles(){
     struct stat infoEnt;
     char path[500];
     while((entry = readdir(dir)) != NULL){
-        sprintf(path, "%s/%s", filepath, entry->d_name);
+        sprintf(path, "%s/%s", FILEPATH, entry->d_name);
         if(lstat(path, &infoEnt)){
             printf("Invalid file!");
         }
@@ -274,7 +274,7 @@ void firstChildProcess(){
 
 void printLineNumber(){
     char command[100];
-    sprintf(command, "wc -l < %s", filepath);
+    sprintf(command, "wc -l < %s", FILEPATH);
 
     FILE *pipe;
     char output[100];
@@ -285,7 +285,7 @@ void printLineNumber(){
         exit(1);
     }
 
-    while (fgets(output, sizeof(output), pipe) != NULL) {
+    while (fgets(output, sizeof(output), pipe)) {
         printf("Line number: %s\n", output);
     }
 
@@ -293,27 +293,40 @@ void printLineNumber(){
 }
 
 void createTextFile(){
-    char *name = strrchr(filepath,'/');
+    char *name = strrchr(FILEPATH,'/');
     char command[100];
 
-    sprintf(command, "touch %s/%s_file.txt",filepath, name == NULL ? filepath : name + 1);  //This writes the command to create the file in the directory given as argument
-    //sprintf(command, "touch %s_file.txt", name == NULL ? filepath : name + 1); //This writes the command to create the file in the working directory
+    sprintf(command, "touch %s/%s_file.txt",FILEPATH, name == NULL ? FILEPATH : name + 1);  //This writes the command to create the file in the directory given as argument
+    //sprintf(command, "touch %s_file.txt", name == NULL ? FILEPATH : name + 1); //This writes the command to create the file in the working directory
 
     system(command);
 }
 
 void changeLinkAccessRights(){
     char command[100];
-    sprintf(command, "chmod u=rwx,g=rw,o= %s", filepath); //command changes the access rights of the target file, as the ones of the symlink are never used
+    sprintf(command, "chmod u=rwx,g=rw,o= %s", FILEPATH); //command changes the access rights of the target file, as the ones of the symlink are never used
     system(command);
 }
 
 void runScript(int pfd[2]){
-    char buff[5], command[100];
+    char command[100];
     close(pfd[0]);
-    sprintf(command, /*"bash script.sh %s", filepath*/ "ls");
-    sprintf(buff, "%s", system(command));
-	write(pfd[1], buff, strlen(buff));
+    sprintf(command, "bash script.sh %s", FILEPATH);
+
+    FILE *pipe;
+    char output[20];
+
+    pipe = popen(command, "r");
+    if (pipe == NULL) {
+        printf("Failed to run command\n" );
+        exit(1);
+    }
+
+    while (fgets(output, sizeof(output), pipe)) {
+        write(pfd[1], output, strlen(output));
+    }
+
+    pclose(pipe);
 	close(pfd[1]);
 }
 
@@ -336,7 +349,18 @@ void secondChildProcess(int pfd[2]){
 
 void processErrorsWarnings(char buff[5]){
     int errors = -1, warnings = -1, score;
-    printf("%d errors and %d warnings\n", errors, warnings);
+    sscanf(buff, "%d %d", &errors, &warnings);
+    if(errors > 0)
+        score = 1;
+    else if(errors == 0){
+        if(warnings == 0)
+            score = 10;
+        else if(warnings > 10)
+                score = 2;
+            else if(warnings < 10) 
+                    score = 2 + 8 *(10 - warnings)/10;
+    }
+    printf("%d errors and %d warnings\nScore: %d\n", errors, warnings, score);
 }
 
 int main(int argc, char* argv[]){
@@ -362,7 +386,7 @@ int main(int argc, char* argv[]){
 	        exit(1);
 	    }
 
-        strcpy(filepath, argv[i]);
+        strcpy(FILEPATH, argv[i]);
         printf("\n");
 
         if((PID = fork()) < 0){
@@ -386,10 +410,12 @@ int main(int argc, char* argv[]){
 
         close(pfd[1]);
 
-        char buff[20];
-        read(pfd[0], buff, 20);
-        printf("%s\n", buff);
-        processErrorsWarnings(buff);
+        if(checkCFile()){
+            char buff[20];
+            read(pfd[0], buff, sizeof(buff));
+            processErrorsWarnings(buff);
+        }
+
         close(pfd[0]);
 
         sleep(1);
