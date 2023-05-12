@@ -55,7 +55,8 @@ void createSymLink(char *name){
     int symLink = symlink(FILEPATH, name);
     if(symLink == 0)
         printf("Symbolic link created succesfully!\n");
-        else printf("Error creating Symbolic link\n");
+    else 
+        printf("Error creating Symbolic link\n");
 }
 
 void deleteSymLink(){
@@ -109,14 +110,19 @@ void countCFiles(){
     closedir(dir);
 }
 
-void processOptionsFile(char options[]){
-    char *opt;
-    char *name;
-    opt = strtok(options, " ");
+void validateoptions();
+void firstChildProcess();
 
-    while(opt != NULL ) {
-        if((strlen(opt) == 2 && opt[0] == '-')){
-            switch(opt[1]){
+void processOptionsFile(char options[]){
+    char name[50];
+    if(options[0] != '-'){
+        printf("Invalid syntax!");
+        firstChildProcess();
+        return;
+    }
+    else{
+        for(int i = 1; i < strlen(options); i++){
+            switch(options[i]){
                 case 'n':
                     printName();
                 break;
@@ -138,27 +144,35 @@ void processOptionsFile(char options[]){
                 break;
 
                 case 'l':
-                    name = strtok(NULL, " ");
+                    printf("Input symbolic link name:");
+                    scanf("%49s", name);
+                    int i = strlen(name) - 1;
+                    while(isspace(name[i])){
+                        options[i] = '\0';
+                        i--;
+                    }
+
                     createSymLink(name);
                 break;
 
-
                 default:
-                    printf("Invalid option: %s\n", opt);
+                    printf("Invalid option: %c\n", options[i]);
+                    firstChildProcess();
+                    return;
             }
-        } else printf("Invalid option: %s\n", opt);
-        
-      opt = strtok(NULL, " ");
+        }
    }
 }
 
 void processOptionsLink(char options[]){
-    char *opt;
-    opt = strtok(options, " ");
-
-    while(opt != NULL ) {
-        if((strlen(opt) == 2 && opt[0] == '-')){
-            switch(opt[1]){
+    if(options[0] != '-'){
+        printf("Invalid syntax!");
+        firstChildProcess();
+        return;
+    }
+    else{
+        for(int i = 1; i < strlen(options); i++){
+            switch(options[i]){
                 case 'n':
                     printName();
                 break;
@@ -181,21 +195,23 @@ void processOptionsLink(char options[]){
                 break;
 
                 default:
-                    printf("Invalid option: %s\n", opt);
+                    printf("Invalid option: %c\n", options[i]);
+                    firstChildProcess();
+                    return;
             }
-        } else printf("Invalid option: %s\n", opt);
-        
-      opt = strtok(NULL, " ");
+        }
    }
 }
 
 void processOptionsDir(char options[]){
-    char *opt;
-    opt = strtok(options, " ");
-
-    while(opt != NULL ) {
-        if((strlen(opt) == 2 && opt[0] == '-')){
-            switch(opt[1]){
+    if(options[0] != '-'){
+        printf("Invalid syntax!");
+        firstChildProcess();
+        return;
+    }
+    else{
+        for(int i = 1; i < strlen(options); i++){
+            switch(options[i]){
                 case 'n':
                     printName();
                 break;
@@ -213,11 +229,11 @@ void processOptionsDir(char options[]){
                 break;
 
                 default:
-                    printf("Invalid option: %s\n", opt);
+                    printf("Invalid option: %c\n", options[i]);
+                    firstChildProcess();
+                    return;
             }
-        } else printf("Invalid option: %s\n", opt);
-        
-      opt = strtok(NULL, " ");
+        }
    }
 }
 
@@ -366,7 +382,7 @@ void processErrorsWarnings(char buff[5]){
 int main(int argc, char* argv[]){
     if(argc < 2){
         perror("Invalid number of arguments!");
-        exit(0);
+        exit(1);
     }
 
     int PID, status;
@@ -396,7 +412,6 @@ int main(int argc, char* argv[]){
         else if(PID == 0){
             firstChildProcess();
             exit(i);
-            sleep(1);
         }
 
         if((PID = fork()) < 0){
@@ -426,7 +441,7 @@ int main(int argc, char* argv[]){
             exit(i);
         }
         if(WIFEXITED(status)){
-            printf("Process with PID %d ended with status %d\n\n", PID_Child, WIFEXITED(status));
+            printf("Process with PID %d ended with exit code %d\n\n", PID_Child, WIFEXITED(status));
         }
 
         PID_Child = wait(&status);
@@ -435,7 +450,7 @@ int main(int argc, char* argv[]){
             exit(i);
         }
         if(WIFEXITED(status)){
-            printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
+            printf("Process with PID %d ended with exit code %d\n", PID_Child, WIFEXITED(status));
         }
 
         sleep(1);
