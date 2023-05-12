@@ -272,7 +272,6 @@ void firstChildProcess(){
             validateOptions(type);
 }
 
-
 void printLineNumber(){
     char command[100];
     sprintf(command, "wc -l < %s", filepath);
@@ -293,6 +292,22 @@ void printLineNumber(){
     pclose(pipe);
 }
 
+void createTextFile(){
+    char *name = strrchr(filepath,'/');
+    char command[100];
+
+    sprintf(command, "touch %s/%s_file.txt",filepath, name == NULL ? filepath : name + 1);  //This writes the command to create the file in the directory given as argument
+    //sprintf(command, "touch %s_file.txt", name == NULL ? filepath : name + 1); //This writes the command to create the file in the working directory
+
+    system(command);
+}
+
+void changeLinkAccessRights(){
+    char command[100];
+    sprintf(command, "chmod u=rwx,g=rw,o= %s", filepath); //command changes the access rights of the target file, as the ones of the symlink are never used
+    system(command);
+}
+
 void secondChildProcess(){
     if(S_ISREG(file.st_mode)){
                 if(checkCFile()) printf("Script!\n");
@@ -300,11 +315,11 @@ void secondChildProcess(){
             }
 
             if(S_ISLNK(file.st_mode)){
-                printf("Change permissions\n");
+                changeLinkAccessRights();
             }
             
             if(S_ISDIR(file.st_mode)){
-                printf("Create text file\n");
+                createTextFile();
             }
 }
 
