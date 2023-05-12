@@ -10,6 +10,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdbool.h>
 
  struct stat file;
  char filepath[50];
@@ -69,6 +70,14 @@ void targetFileSize(){
             exit(2);
         }
     printf("Size: %ld Bytes\n", target.st_size);
+}
+
+bool checkCFile(){
+    char *ext = strrchr(filepath,'.');
+    if(ext && !strcmp(ext,".c")){
+        return true;
+        }
+    return false;
 }
 
 void countCFiles(){
@@ -241,30 +250,9 @@ void validateOptions(int type){
     }
 }
 
+void firstChildProcess(){
+    int type;
 
-int main(int argc, char* argv[]){
-    if(argc < 2){
-        perror("Invalid number of arguments!");
-        exit(0);
-    }
-
-    int PID, status;
-
-    for(int i = 1; i < argc; i++){
-       
-        if(lstat(argv[i], &file)){
-            perror("Error!\n");
-            exit(2);
-        }
-
-        if((PID = fork()) < 0){
-            perror("Failed to create process!\n");
-                exit(i);
-        }
-        else if(PID == 0){
-            int type;
-
-            strcpy(filepath, argv[i]);
             printName();
             if(S_ISREG(file.st_mode)){
                 printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
@@ -282,19 +270,12 @@ int main(int argc, char* argv[]){
                 
             }
             validateOptions(type);
+}
 
-            exit(i);
-
-            sleep(1);
-        }
-
-        if((PID = fork()) < 0){
-            perror("Failed to create process!\n");
-            exit(i);
-        }
-        else if(PID == 0){
-            if(S_ISREG(file.st_mode)){
-                printf("Execute script or count lines\n");
+void secondChildProcess(){
+    if(S_ISREG(file.st_mode)){
+                if(checkCFile()) printf("Script!\n");
+                else printf("Printlines\n");
             }
 
             if(S_ISLNK(file.st_mode)){
@@ -304,6 +285,41 @@ int main(int argc, char* argv[]){
             if(S_ISDIR(file.st_mode)){
                 printf("Create text file\n");
             }
+}
+
+int main(int argc, char* argv[]){
+    if(argc < 2){
+        perror("Invalid number of arguments!");
+        exit(0);
+    }
+
+    int PID, status;
+
+    for(int i = 1; i < argc; i++){
+       
+        if(lstat(argv[i], &file)){
+            perror("Error!\n");
+            exit(2);
+        }
+
+        strcpy(filepath, argv[i]);
+
+        if((PID = fork()) < 0){
+            perror("Failed to create process!\n");
+                exit(i);
+        }
+        else if(PID == 0){
+            firstChildProcess();
+            exit(i);
+            sleep(1);
+        }
+
+        if((PID = fork()) < 0){
+            perror("Failed to create process!\n");
+            exit(i);
+        }
+        else if(PID == 0){
+            secondChildProcess();
             exit(i);
         }
 
