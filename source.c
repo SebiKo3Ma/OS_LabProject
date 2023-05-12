@@ -308,9 +308,20 @@ void changeLinkAccessRights(){
     system(command);
 }
 
-void secondChildProcess(){
+void runScript(int pfd[2]){
+    char buff[5], command[100];
+    close(pfd[0]);
+    sprintf(command, /*"bash script.sh %s", filepath*/ "ls");
+    sprintf(buff, "%s", system(command));
+	write(pfd[1], buff, strlen(buff));
+	close(pfd[1]);
+}
+
+void secondChildProcess(int pfd[2]){
     if(S_ISREG(file.st_mode)){
-                if(checkCFile()) printf("Script!\n");
+                if(checkCFile()){
+                   runScript(pfd);
+                }
                 else printLineNumber();
             }
 
@@ -323,6 +334,11 @@ void secondChildProcess(){
             }
 }
 
+void processErrorsWarnings(char buff[5]){
+    int errors = -1, warnings = -1, score;
+    printf("%d errors and %d warnings\n", errors, warnings);
+}
+
 int main(int argc, char* argv[]){
     if(argc < 2){
         perror("Invalid number of arguments!");
@@ -332,11 +348,19 @@ int main(int argc, char* argv[]){
     int PID, status;
 
     for(int i = 1; i < argc; i++){
+
+        int pfd[2];
        
         if(lstat(argv[i], &file)){
             perror("Error!\n");
             exit(2);
         }
+
+        if(pipe(pfd)<0)
+	    {
+	        perror("Pipe creation error\n");
+	        exit(1);
+	    }
 
         strcpy(filepath, argv[i]);
         printf("\n");
@@ -356,9 +380,17 @@ int main(int argc, char* argv[]){
             exit(i);
         }
         else if(PID == 0){
-            secondChildProcess();
+            secondChildProcess(pfd);
             exit(i);
         }
+
+        close(pfd[1]);
+
+        char buff[20];
+        read(pfd[0], buff, 20);
+        printf("%s\n", buff);
+        processErrorsWarnings(buff);
+        close(pfd[0]);
 
         sleep(1);
         int PID_Child;
@@ -380,6 +412,6 @@ int main(int argc, char* argv[]){
             printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
         }
 
-        sleep(2);
+        sleep(1);
     }
 }
