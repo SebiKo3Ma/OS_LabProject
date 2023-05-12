@@ -189,7 +189,6 @@ void processOptionsLink(char options[]){
    }
 }
 
-
 void processOptionsDir(char options[]){
     char *opt;
     opt = strtok(options, " ");
@@ -222,10 +221,11 @@ void processOptionsDir(char options[]){
    }
 }
 
-
 void validateOptions(int type){
     char options[100];
 
+    sleep(2);
+    printf("Input options:");
     fgets(options, sizeof(options), stdin);
 
     int i = strlen(options) - 1;
@@ -255,27 +255,48 @@ void firstChildProcess(){
 
             printName();
             if(S_ISREG(file.st_mode)){
-                printf("\nREGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n");
+                printf("REGULAR FILE:\n-n show name\n-d show size\n-h show the hard link count\n-m show time of last modification\n-a show access rights\n-l create a symbolic link\n\n");
                 type = 1;
             }
 
             if(S_ISLNK(file.st_mode)){
-                printf("\nSYMBOLIC LINK:\n-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n");
+                printf("SYMBOLIC LINK:\n-n show name\n-l delete symbolic links\n-d show size of sybolic link\n-t show size of target file\n-a show access rights\n\n");
                 type = 2;
             }
             
             if(S_ISDIR(file.st_mode)){
-                printf("\nDIRECTORY:\n-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n");
+                printf("DIRECTORY:\n-n show name\n-d show size\n-a show access rights\n-c show total number of files with .c extension\n\n");
                 type = 3;
                 
             }
             validateOptions(type);
 }
 
+
+void printLineNumber(){
+    char command[100];
+    sprintf(command, "wc -l < %s", filepath);
+
+    FILE *pipe;
+    char output[100];
+
+    pipe = popen(command, "r");
+    if (pipe == NULL) {
+        printf("Failed to run command\n" );
+        exit(1);
+    }
+
+    while (fgets(output, sizeof(output), pipe) != NULL) {
+        printf("Line number: %s\n", output);
+    }
+
+    pclose(pipe);
+}
+
 void secondChildProcess(){
     if(S_ISREG(file.st_mode)){
                 if(checkCFile()) printf("Script!\n");
-                else printf("Printlines\n");
+                else printLineNumber();
             }
 
             if(S_ISLNK(file.st_mode)){
@@ -303,6 +324,7 @@ int main(int argc, char* argv[]){
         }
 
         strcpy(filepath, argv[i]);
+        printf("\n");
 
         if((PID = fork()) < 0){
             perror("Failed to create process!\n");
@@ -323,7 +345,6 @@ int main(int argc, char* argv[]){
             exit(i);
         }
 
-
         sleep(1);
         int PID_Child;
         PID_Child = wait(&status);
@@ -332,7 +353,7 @@ int main(int argc, char* argv[]){
             exit(i);
         }
         if(WIFEXITED(status)){
-            printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
+            printf("Process with PID %d ended with status %d\n\n", PID_Child, WIFEXITED(status));
         }
 
         PID_Child = wait(&status);
@@ -343,5 +364,7 @@ int main(int argc, char* argv[]){
         if(WIFEXITED(status)){
             printf("Process with PID %d ended with status %d\n", PID_Child, WIFEXITED(status));
         }
+
+        sleep(2);
     }
 }
